@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 320px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 18px;
+      color: #e50914;
+    }
+    
+    .status {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    
+    .status.connected {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .status.disconnected {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    
+    input[type="text"] {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    button {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .btn-primary {
+      background-color: #e50914;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background-color: #b2070e;
+    }
+    
+    .btn-secondary {
+      background-color: #6c757d;
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background-color: #545b62;
+    }
+    
+    .btn-success {
+      background-color: #28a745;
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background-color: #1e7e34;
+    }
+    
+    .btn-danger {
+      background-color: #dc3545;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background-color: #c82333;
+    }
+    
+    .info {
+      background-color: #d1ecf1;
+      color: #0c5460;
+      padding: 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    .room-info {
+      background-color: #e2e3e5;
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+    }
+    
+    .room-info h3 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+    }
+    
+    .room-info p {
+      margin: 0;
+      font-size: 12px;
+      color: #6c757d;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🎬 Netflix Sync</h1>
+  </div>
+  
+  <div id="status" class="status disconnected">
+    <div id="statusText">未連接</div>
+  </div>
+  
+  <div id="netflixCheck" class="info">
+    <strong>提示：</strong>請確保您正在 Netflix 頁面並播放影片
+  </div>
+  
+  <div id="connectionForm">
+    <div class="form-group">
+      <label for="roomName">房間名稱：</label>
+      <input type="text" id="roomName" placeholder="輸入房間名稱">
+    </div>
+    
+    <div class="button-group">
+      <button id="joinBtn" class="btn-primary">加入房間</button>
+      <button id="leaveBtn" class="btn-secondary">離開房間</button>
+    </div>
+    
+    <div class="form-group">
+      <label for="createRoomId">建立房間 ID：</label>
+      <input type="text" id="createRoomId" placeholder="輸入房間 ID">
+    </div>
+    
+    <div class="form-group">
+      <label for="createRoomName">建立房間名稱：</label>
+      <input type="text" id="createRoomName" placeholder="輸入房間名稱">
+    </div>
+    
+    <div class="button-group">
+      <button id="createBtn" class="btn-success">建立房間</button>
+      <button id="getRoomsBtn" class="btn-secondary">查看房間列表</button>
+    </div>
+  </div>
+  
+  <div id="roomInfo" class="room-info hidden">
+    <h3>當前房間</h3>
+    <p id="currentRoom">-</p>
+  </div>
+  
+  <div class="info">
+    <strong>使用說明：</strong><br>
+    1. 打開 Netflix 並開始播放影片<br>
+    2. 輸入房間名稱並點擊「加入房間」<br>
+    3. 與朋友分享房間名稱即可同步觀看
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html> 
