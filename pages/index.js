@@ -12,7 +12,7 @@ export default function Home() {
     // 測試 WebSocket 連接
     const testConnection = async () => {
       try {
-        const response = await fetch('/api/ws')
+        const response = await fetch('https://web-production-14c5.up.railway.app')
         if (response.ok) {
           setStatus('WebSocket 端點正常')
         } else {
@@ -73,7 +73,7 @@ export default function Home() {
   const fetchRooms = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/rooms')
+      const response = await fetch('/rooms')
       if (response.ok) {
         const data = await response.json()
         setRooms(data.rooms)
@@ -93,7 +93,7 @@ export default function Home() {
     }
     
     try {
-      const response = await fetch('/api/rooms', {
+      const response = await fetch('/rooms', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

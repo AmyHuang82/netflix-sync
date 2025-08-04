@@ -26,7 +26,7 @@
   
   // 配置
   const CONFIG = {
-    SERVER_URL: 'https://your-vercel-app.vercel.app', // 請替換為你的 Vercel 應用網址
+    SERVER_URL: 'https://web-production-14c5.up.railway.app',
     RECONNECT_INTERVAL: 5000,
     DEBOUNCE_DELAY: 300
   };
