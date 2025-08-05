@@ -27,15 +27,13 @@
   // 配置
   const CONFIG = {
     SERVER_URL: 'https://web-production-14c5.up.railway.app',
-    RECONNECT_INTERVAL: 5000,
-    DEBOUNCE_DELAY: 300
+    RECONNECT_INTERVAL: 5000
   };
   
   // 全域變數
   let socket = null;
   let currentRoom = null;
   let isConnected = false;
-  let debounceTimer = null;
   let isProcessingRemoteAction = false;
   let netflixPlayer = null;
   let netflixVideoPlayer = null;
@@ -87,11 +85,12 @@
     },
     
     // 播放影片
-    async play() {
+    async play(timeInMilliseconds) {
       const videoPlayer = this.getCurrentVideoPlayer();
       if (!videoPlayer) return false;
       
       try {
+        if (timeInMilliseconds) videoPlayer.seek(timeInMilliseconds);
         videoPlayer.play();
         this._lastTime = this.getCurrentTime();
         socket.emit('play-state', {
@@ -131,6 +130,9 @@
         videoPlayer.seek(timeInMilliseconds);
         this._lastTime = timeInMilliseconds;
         utils.log(`跳轉到時間：${utils.formatTime(timeInMilliseconds / 1000)}`);
+        socket.emit('seek-time', {
+          currentTime: timeInMilliseconds,
+        });
         return true;
       } catch (error) {
         utils.log(`跳轉失敗：${error.message}`, 'error');
@@ -140,41 +142,38 @@
     
     // 設置事件監聽器
     setupEventListeners() {
-      const videoPlayer = this.getCurrentVideoPlayer();
-      if (!videoPlayer) return;
+      const videoElement = window.document.querySelector('video');
+      if (!videoElement) return;
       
       try {
         // 監聽播放事件
-        videoPlayer.addEventListener('play', () => {
+        videoElement.addEventListener('play', () => {
           if (isConnected && currentRoom && !isProcessingRemoteAction) {
             const currentTime = this.getCurrentTime();
             socket.emit('play-state', {
               currentTime: currentTime,
-              duration: videoPlayer.getDuration()
             });
             utils.log('發送播放同步事件');
           }
         });
         
         // 監聽暫停事件
-        videoPlayer.addEventListener('pause', () => {
+        videoElement.addEventListener('pause', () => {
           if (isConnected && currentRoom && !isProcessingRemoteAction) {
             const currentTime = this.getCurrentTime();
             socket.emit('pause-state', {
               currentTime: currentTime,
-              duration: videoPlayer.getDuration()
             });
             utils.log('發送暫停同步事件');
           }
         });
         
         // 監聽跳轉事件
-        videoPlayer.addEventListener('seeked', () => {
+        videoElement.addEventListener('seeked', () => {
           if (isConnected && currentRoom && !isProcessingRemoteAction) {
-            const currentTime = this.getCurrentTime();
+            const currentTime = videoElement.currentTime * 1000;
             socket.emit('seek-time', {
               currentTime: currentTime,
-              duration: videoPlayer.getDuration()
             });
             utils.log('發送跳轉同步事件');
           }
@@ -189,11 +188,6 @@
   
   // 工具函數
   const utils = {
-    getVideo() {
-      // 保留 DOM video 元素作為備用
-      return document.querySelector('video');
-    },
-    
     isNetflixPage() {
       return netflixAPI.isNetflixPage();
     },
@@ -224,8 +218,8 @@
     },
     
     // 播放影片
-    async playVideo() {
-      return await netflixAPI.play();
+    async playVideo(targetTime) {
+      return await netflixAPI.play(targetTime);
     },
     
     // 暫停影片
@@ -252,7 +246,7 @@
         const io = await loadSocketIO();
         
         socket = io(CONFIG.SERVER_URL, {
-          transports: ['websocket', 'polling'],
+          transports: ['websocket'],
           timeout: 20000
         });
         
@@ -408,7 +402,7 @@
       socket.on('play-state-update', async (data) => {
         if (data.userId !== socket.id && !isProcessingRemoteAction) {
           isProcessingRemoteAction = true;
-          if (await utils.playVideo()) {
+          if (await utils.playVideo(data.currentTime)) {
             utils.log('收到播放同步');
           }
           setTimeout(() => { isProcessingRemoteAction = false; }, 1000);
@@ -517,14 +511,9 @@
       };
     },
     
-    // 手動同步
-    sync() {
-      netflixController.syncCurrentState();
-    },
-    
     // 手動控制
-    async play() {
-      return await utils.playVideo();
+    async play(time) {
+      return await utils.playVideo(time);
     },
     
     async pause() {
