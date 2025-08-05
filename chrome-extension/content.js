@@ -1,19 +1,34 @@
-// Netflix Sync Content Script
+// Netflix Sync Content Script - Chrome Extension 版本
+// 基於 netflix-sync-client.js 邏輯改寫
 (function() {
   'use strict';
   
+  // 首先載入 Socket.IO 客戶端庫
+  function loadSocketIO() {
+    return new Promise((resolve, reject) => {
+      if (window.io) {
+        resolve(window.io);
+        return;
+      }
+      
+      const script = document.createElement('script');
+      script.src = 'https://cdn.socket.io/4.7.0/socket.io.min.js';
+      script.onload = () => resolve(window.io);
+      script.onerror = () => reject(new Error('無法載入 Socket.IO'));
+      document.head.appendChild(script);
+    });
+  }
+  
   // 配置
   const CONFIG = {
-    SERVER_URL: 'https://your-vercel-app.vercel.app', // 請替換為你的 Vercel 應用網址
-    RECONNECT_INTERVAL: 5000,
-    DEBOUNCE_DELAY: 300
+    SERVER_URL: 'https://web-production-14c5.up.railway.app',
+    RECONNECT_INTERVAL: 5000
   };
   
   // 全域變數
   let socket = null;
   let currentRoom = null;
   let isConnected = false;
-  let debounceTimer = null;
   let isProcessingRemoteAction = false;
   let netflixPlayer = null;
   let netflixVideoPlayer = null;
@@ -58,22 +73,29 @@
       if (!videoPlayer) return 0;
       
       try {
-        return videoPlayer.getCurrentTime();
+        return videoPlayer.getCurrentTime(); // 直接返回毫秒
       } catch (error) {
         return 0;
       }
     },
     
     // 播放影片
-    async play() {
+    async play(timeInMilliseconds) {
       const videoPlayer = this.getCurrentVideoPlayer();
       if (!videoPlayer) return false;
       
       try {
+        if (timeInMilliseconds) videoPlayer.seek(timeInMilliseconds);
         videoPlayer.play();
+        this._lastTime = this.getCurrentTime();
+        if (socket && socket.connected) {
+          socket.emit('play-state', {
+            currentTime: this._lastTime,
+          });
+        }
         return true;
       } catch (error) {
-        console.error(`播放失敗：${error.message}`);
+        utils.log(`播放失敗：${error.message}`, 'error');
         return false;
       }
     },
@@ -85,9 +107,15 @@
       
       try {
         videoPlayer.pause();
+        this._lastTime = this.getCurrentTime();
+        if (socket && socket.connected) {
+          socket.emit('pause-state', {
+            currentTime: this._lastTime,
+          });
+        }
         return true;
       } catch (error) {
-        console.error(`暫停失敗：${error.message}`);
+        utils.log(`暫停失敗：${error.message}`, 'error');
         return false;
       }
     },
@@ -99,95 +127,72 @@
       
       try {
         videoPlayer.seek(timeInMilliseconds);
+        this._lastTime = timeInMilliseconds;
+        utils.log(`跳轉到時間：${utils.formatTime(timeInMilliseconds / 1000)}`);
+        if (socket && socket.connected) {
+          socket.emit('seek-time', {
+            currentTime: timeInMilliseconds,
+          });
+        }
         return true;
       } catch (error) {
-        console.error(`跳轉失敗：${error.message}`);
+        utils.log(`跳轉失敗：${error.message}`, 'error');
         return false;
-      }
-    },
-    
-    // 獲取播放狀態
-    getPlaybackState() {
-      const videoPlayer = this.getCurrentVideoPlayer();
-      if (!videoPlayer) return null;
-      
-      try {
-        const currentTime = this.getCurrentTime();
-        const isPaused = this.isPaused();
-        
-        return {
-          currentTime,
-          paused: isPaused,
-          readyState: 4
-        };
-      } catch (error) {
-        return null;
-      }
-    },
-    
-    // 檢查是否暫停
-    isPaused() {
-      const videoPlayer = this.getCurrentVideoPlayer();
-      if (!videoPlayer) return true;
-      
-      try {
-        return videoPlayer.isPaused();
-      } catch (error) {
-        return true;
       }
     },
     
     // 設置事件監聽器
     setupEventListeners() {
-      const videoPlayer = this.getCurrentVideoPlayer();
-      if (!videoPlayer) return;
+      const videoElement = window.document.querySelector('video');
+      if (!videoElement) return;
       
       try {
         // 監聽播放事件
-        videoPlayer.addEventListener('play', () => {
+        videoElement.addEventListener('play', () => {
           if (isConnected && currentRoom && !isProcessingRemoteAction) {
             const currentTime = this.getCurrentTime();
             socket.emit('play-state', {
               currentTime: currentTime,
-              duration: videoPlayer.getDuration()
             });
-            console.log('發送播放同步事件');
+            utils.log('發送播放同步事件');
           }
         });
         
         // 監聽暫停事件
-        videoPlayer.addEventListener('pause', () => {
+        videoElement.addEventListener('pause', () => {
           if (isConnected && currentRoom && !isProcessingRemoteAction) {
             const currentTime = this.getCurrentTime();
             socket.emit('pause-state', {
               currentTime: currentTime,
-              duration: videoPlayer.getDuration()
             });
-            console.log('發送暫停同步事件');
+            utils.log('發送暫停同步事件');
           }
         });
         
         // 監聽跳轉事件
-        videoPlayer.addEventListener('seeked', () => {
+        videoElement.addEventListener('seeked', () => {
           if (isConnected && currentRoom && !isProcessingRemoteAction) {
-            const currentTime = this.getCurrentTime();
+            const currentTime = videoElement.currentTime * 1000;
             socket.emit('seek-time', {
               currentTime: currentTime,
-              duration: videoPlayer.getDuration()
             });
-            console.log('發送跳轉同步事件');
+            utils.log('發送跳轉同步事件');
           }
         });
         
-        console.log('Netflix 事件監聽器設置完成');
+        utils.log('Netflix 事件監聽器設置完成');
       } catch (error) {
-        console.error(`設置事件監聽器失敗：${error.message}`);
+        utils.log(`設置事件監聽器失敗：${error.message}`, 'error');
       }
     }
   };
   
   // 工具函數
   const utils = {
+    isNetflixPage() {
+      return netflixAPI.isNetflixPage();
+    },
+    
     formatTime(seconds) {
       const mins = Math.floor(seconds / 60);
       const secs = Math.floor(seconds % 60);
@@ -214,8 +219,8 @@
     },
     
     // 播放影片
-    async playVideo() {
-      return await netflixAPI.play();
+    async playVideo(targetTime) {
+      return await netflixAPI.play(targetTime);
     },
     
     // 暫停影片
@@ -225,12 +230,7 @@
     
     // 跳轉到指定時間
     seekToTime(targetTime) {
-      return netflixAPI.seek(targetTime);
-    },
-    
-    // 獲取當前播放狀態
-    getPlaybackState() {
-      return netflixAPI.getPlaybackState();
+      return netflixAPI.seek(targetTime); // targetTime 現在是毫秒
     }
   };
   
@@ -244,10 +244,10 @@
       
       try {
         // 載入 Socket.IO
-        const io = await this.loadSocketIO();
+        const io = await loadSocketIO();
         
         socket = io(CONFIG.SERVER_URL, {
-          transports: ['websocket', 'polling'],
+          transports: ['websocket'],
           timeout: 20000
         });
         
@@ -283,21 +283,6 @@
       } catch (error) {
         utils.log(`連接失敗：${error.message}`, 'error');
       }
-    },
-    
-    async loadSocketIO() {
-      return new Promise((resolve, reject) => {
-        if (window.io) {
-          resolve(window.io);
-          return;
-        }
-        
-        const script = document.createElement('script');
-        script.src = 'https://cdn.socket.io/4.7.0/socket.io.min.js';
-        script.onload = () => resolve(window.io);
-        script.onerror = () => reject(new Error('無法載入 Socket.IO'));
-        document.head.appendChild(script);
-      });
     },
     
     disconnect() {
@@ -350,9 +335,7 @@
         socket.emit('leave-room');
         currentRoom = null;
         utils.log('離開房間');
-        return true;
       }
-      return false;
     },
     
     getRooms() {
@@ -420,7 +403,7 @@
       socket.on('play-state-update', async (data) => {
         if (data.userId !== socket.id && !isProcessingRemoteAction) {
           isProcessingRemoteAction = true;
-          if (await utils.playVideo()) {
+          if (await utils.playVideo(data.currentTime)) {
             utils.log('收到播放同步');
           }
           setTimeout(() => { isProcessingRemoteAction = false; }, 1000);
@@ -462,7 +445,7 @@
   // Netflix 控制管理
   const netflixController = {
     init() {
-      if (!netflixAPI.isNetflixPage()) {
+      if (!utils.isNetflixPage()) {
         utils.log('請在 Netflix 頁面使用此腳本', 'error');
         return false;
       }
@@ -485,38 +468,16 @@
       // 設置 Netflix 事件監聽器
       netflixAPI.setupEventListeners();
       utils.log('播放事件監聽器設置完成');
-    },
-    
-    syncCurrentState() {
-      if (!isConnected || !currentRoom) return;
-      
-      const state = utils.getPlaybackState();
-      if (!state) return;
-      
-      if (state.paused) {
-        socket.emit('pause-state', {
-          currentTime: state.currentTime,
-          duration: state.duration
-        });
-      } else {
-        socket.emit('play-state', {
-          currentTime: state.currentTime,
-          duration: state.duration
-        });
-      }
-      
-      utils.log('已同步當前狀態');
     }
   };
   
-  // 消息處理器
+  // 消息處理器 - Chrome 擴展專用
   const messageHandler = {
     // 獲取狀態
     getStatus() {
       return {
         isConnected,
         currentRoom,
-        video: utils.getPlaybackState(),
         netflixPlayer: !!netflixPlayer,
         netflixVideoPlayer: !!netflixVideoPlayer
       };
@@ -546,7 +507,7 @@
     },
     
     // 加入房間
-    async joinRoom(roomName) {
+    async joinRoom(roomId) {
       try {
         // 初始化 Netflix 控制器
         if (!netflixController.init()) {
@@ -557,7 +518,7 @@
         await connectionManager.connect();
         
         // 加入房間
-        const success = connectionManager.joinRoom(roomName);
+        const success = connectionManager.joinRoom(roomId);
         if (success) {
           return { success: true };
         } else {
@@ -612,10 +573,26 @@
       }
     },
     
-    // 手動同步
-    sync() {
-      netflixController.syncCurrentState();
-      return { success: true };
+    // 手動控制
+    async play(time) {
+      return await utils.playVideo(time);
+    },
+    
+    async pause() {
+      return await utils.pauseVideo();
+    },
+    
+    seek(time) {
+      return utils.seekToTime(time); // time 參數是毫秒
+    },
+    
+    // 獲取 Netflix API 實例
+    getNetflixAPI() {
+      return {
+        player: netflixPlayer,
+        videoPlayer: netflixVideoPlayer,
+        api: netflixAPI
+      };
     }
   };
   
@@ -635,7 +612,7 @@
         return true; // 保持消息通道開啟
         
       case 'joinRoom':
-        messageHandler.joinRoom(request.roomName).then(result => {
+        messageHandler.joinRoom(request.roomId).then(result => {
           sendResponse(result);
         });
         return true; // 保持消息通道開啟
@@ -656,8 +633,25 @@
         });
         return true; // 保持消息通道開啟
         
-      case 'sync':
-        sendResponse(messageHandler.sync());
+      case 'play':
+        messageHandler.play(request.time).then(result => {
+          sendResponse({ success: result });
+        });
+        return true;
+        
+      case 'pause':
+        messageHandler.pause().then(result => {
+          sendResponse({ success: result });
+        });
+        return true;
+        
+      case 'seek':
+        const seekResult = messageHandler.seek(request.time);
+        sendResponse({ success: seekResult });
+        break;
+        
+      case 'getNetflixAPI':
+        sendResponse({ success: true, data: messageHandler.getNetflixAPI() });
         break;
         
       default:
@@ -666,11 +660,11 @@
   });
   
   // 自動初始化
-  if (netflixAPI.isNetflixPage()) {
-    utils.log('正在初始化 NetflixSync...');
+  if (utils.isNetflixPage()) {
+    utils.log('正在初始化 NetflixSync Chrome 擴展...');
     netflixController.init();
   } else {
-    utils.log('請在 Netflix 頁面執行此腳本', 'error');
+    utils.log('請在 Netflix 頁面使用此擴展', 'error');
   }
   
 })(); 

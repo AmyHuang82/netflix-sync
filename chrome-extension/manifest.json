@@ -10,7 +10,7 @@
   ],
   "host_permissions": [
     "https://*.netflix.com/*",
-    "https://your-vercel-app.vercel.app/*"
+    "https://web-production-14c5.up.railway.app/*"
   ],
   "action": {
     "default_popup": "popup.html",

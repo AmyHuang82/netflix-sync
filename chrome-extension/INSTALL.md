@@ -6,15 +6,17 @@
 
 確保你有以下文件：
 ```
-netflix-sync-extension/
+chrome-extension/
 ├── manifest.json
 ├── popup.html
 ├── popup.js
 ├── background.js
 ├── content.js
-├── README-EXTENSION.md
+├── README.md
 └── icons/
-    └── icon.svg
+    ├── icon16.png
+    ├── icon48.png
+    └── icon128.png
 ```
 
 ### 2. 生成圖標
@@ -31,12 +33,20 @@ netflix-sync-extension/
 編輯 `content.js` 文件，找到以下行：
 ```javascript
 const CONFIG = {
-  SERVER_URL: 'https://your-vercel-app.vercel.app', // 替換為你的地址
+  SERVER_URL: 'https://web-production-14c5.up.railway.app',
   // ...
 };
 ```
 
-將 `https://your-vercel-app.vercel.app` 替換為你的實際 Vercel 應用地址。
+如果需要使用自定義伺服器，請將 `https://web-production-14c5.up.railway.app` 替換為你的實際伺服器地址。
+
+同時更新 `manifest.json` 中的 `host_permissions`：
+```json
+"host_permissions": [
+  "https://*.netflix.com/*",
+  "https://your-server-url.com/*"
+]
+```
 
 ### 4. 安裝擴展
 
@@ -52,7 +62,23 @@ const CONFIG = {
 1. 前往 [Netflix](https://netflix.com)
 2. 開始播放任何影片
 3. 點擊 Chrome 工具欄中的 Netflix Sync 圖標
-4. 輸入房間名稱並點擊「加入房間」
+4. 建立房間或輸入房間 ID 並點擊「加入房間」
+
+## 使用說明
+
+### 建立房間
+1. 在擴展彈出視窗中輸入房間 ID 和房間名稱
+2. 點擊「建立房間」按鈕
+3. 將房間 ID 分享給朋友
+
+### 加入房間
+1. 在擴展彈出視窗中輸入房間 ID
+2. 點擊「加入房間」按鈕
+3. 等待連接成功
+
+### 查看房間列表
+1. 點擊「查看房間列表」按鈕
+2. 在瀏覽器控制台查看所有可用房間
 
 ## 故障排除
 
@@ -70,6 +96,9 @@ A: 檢查 content.js 中的 SERVER_URL 是否正確，確保伺服器正在運�
 **Q: 在 Netflix 頁面沒有反應**
 A: 確保正在播放 Netflix 影片，擴展只在播放頁面工作。
 
+**Q: 房間同步不工作**
+A: 確保成功加入房間，檢查瀏覽器控制台的連接日誌。
+
 ### 調試技巧
 
 1. **查看擴展錯誤**：
@@ -81,6 +110,10 @@ A: 確保正在播放 Netflix 影片，擴展只在播放頁面工作。
 
 3. **檢查網絡連接**：
    - 在開發者工具的 Network 標籤中查看 WebSocket 連接
+
+4. **手動測試功能**：
+   - 在瀏覽器控制台使用 `NetflixSync.getStatus()` 檢查狀態
+   - 使用 `NetflixSync.getNetflixAPI()` 檢查 Netflix API 連接
 
 ## 開發模式
 
@@ -94,6 +127,12 @@ A: 確保正在播放 Netflix 影片，擴展只在播放頁面工作。
 - **UI 修改**：編輯 `popup.html` 和 `popup.js`
 - **邏輯修改**：編輯 `content.js`
 - **權限修改**：編輯 `manifest.json`
+
+### 本地開發
+
+1. 修改 `content.js` 中的 `CONFIG.SERVER_URL` 為本地伺服器地址
+2. 在 Chrome 擴展頁面點擊「重新載入」
+3. 測試功能並查看控制台輸出
 
 ## 部署到 Chrome Web Store
 
@@ -120,4 +159,5 @@ A: 確保正在播放 Netflix 影片，擴展只在播放頁面工作。
 1. 檢查瀏覽器控制台的錯誤信息
 2. 確認所有文件都正確創建
 3. 驗證伺服器地址是否正確
-4. 確保 Netflix 頁面正在播放影片 
+4. 確保 Netflix 頁面正在播放影片
+5. 查看擴展的連接狀態和房間信息 
