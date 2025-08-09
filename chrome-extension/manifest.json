@@ -12,6 +12,12 @@
     "https://*.netflix.com/*",
     "https://web-production-14c5.up.railway.app/*"
   ],
+  "web_accessible_resources": [
+    {
+      "resources": ["socket.io.min.js", "netflix-api.js"],
+      "matches": ["https://*.netflix.com/*"]
+    }
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_title": "Netflix Sync"
