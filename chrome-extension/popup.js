@@ -16,8 +16,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const getRoomsBtn = document.getElementById('getRoomsBtn');
 
   // 更新狀態顯示
-  function updateStatus(isConnected, roomId = null) {
-    if (isConnected) {
+  function updateStatus(isJoinedRoom, roomId = null) {
+    if (isJoinedRoom) {
       statusElement.className = 'status connected';
       statusTextElement.textContent = roomId ? `已連接 - 房間：${roomId}` : '已連接';
     } else {
@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
       chrome.tabs.sendMessage(tabs[0].id, {action: 'getStatus'}, function(response) {
         if (response && response.success) {
           const status = response.data;
-          updateStatus(status.isConnected, status.currentRoom);
+          updateStatus(status.isJoinedRoom, status.currentRoom);
           updateRoomInfo(status.currentRoom);
         }
       });
@@ -149,5 +149,5 @@ document.addEventListener('DOMContentLoaded', function() {
   getCurrentStatus();
 
   // 定期更新狀態
-  setInterval(getCurrentStatus, 2000);
+  setInterval(getCurrentStatus, 30 * 60 * 1000);
 }); 

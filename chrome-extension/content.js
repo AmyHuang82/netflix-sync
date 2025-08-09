@@ -25,53 +25,13 @@
     });
   }
 
-  // 處理來自頁面腳本的事件
-  function handleNetflixEvent(event) {
-    const { action, data } = event;
-    
-    switch (action) {
-      case 'timeUpdate':
-        if (socket && socket.connected && !isProcessingRemoteAction) {
-          socket.emit('time-update', {
-            currentTime: data.currentTime,
-          });
-        }
-        break;
-      
-      case 'error':
-        utils.log(data.message, 'error');
-        break;
-        
-      default:
-        utils.log(`未知的事件類型：${action}`);
-    }
-  }
-
-  // 初始化訊息監聽器
-  function initMessageListener() {
-    window.addEventListener('message', function(event) {
-      // 確保訊息來源是同一個視窗
-      if (event.source !== window) return;
-      
-      if (event.data.type && event.data.type === 'NETFLIX_SYNC_EVENT') {
-        handleNetflixEvent(event.data);
-      }
-    });
-  }
-  
-  // 配置
   const CONFIG = {
-    SERVER_URL: 'https://web-production-14c5.up.railway.app',
-    RECONNECT_INTERVAL: 5000
+    SERVER_URL: 'https://web-production-14c5.up.railway.app'
   };
-  
-  // 全域變數
+
   let socket = null;
+  let isJoinedRoom = false;
   let currentRoom = null;
-  let isConnected = false;
-  let isProcessingRemoteAction = false;
-  let netflixPlayer = null;
-  let netflixVideoPlayer = null;
   
   // Netflix API 管理 - 通過 postMessage 與注入腳本通信
   const netflixAPI = {
@@ -88,8 +48,22 @@
           window.removeEventListener('message', listener);
           resolve(event.data.result);
         };
-        
+
         window.addEventListener('message', listener);
+
+        window.addEventListener('message', function(event) {
+          if (event.source !== window) return;
+          if (!event.data || event.data.type !== 'NETFLIX_SYNC_EVENT') return;
+
+          // 處理獲取 isJoinedRoom 狀態的請求
+          if (event.data.action === 'GET_ROOM_STATUS') {
+            window.postMessage({
+              type: 'NETFLIX_SYNC_RESPONSE',
+              messageId: event.data.messageId,
+              result: { isJoinedRoom, currentRoom }
+            }, '*');
+          }
+        });
         
         // 發送命令
         window.postMessage({
@@ -109,35 +83,6 @@
     // 獲取當前播放時間（毫秒）
     async getCurrentTime() {
       return await this.sendCommand('getCurrentTime');
-    },
-    
-    // 播放影片
-    async play(timeInMilliseconds) {
-      const result = await this.sendCommand('play', { timeInMilliseconds });
-      if (result && socket && socket.connected) {
-        const currentTime = await this.getCurrentTime();
-        socket.emit('play-state', { currentTime });
-      }
-      return result;
-    },
-    
-    // 暫停影片
-    async pause() {
-      const result = await this.sendCommand('pause');
-      if (result && socket && socket.connected) {
-        const currentTime = await this.getCurrentTime();
-        socket.emit('pause-state', { currentTime });
-      }
-      return result;
-    },
-    
-    // 跳轉到指定時間（毫秒）
-    async seek(timeInMilliseconds) {
-      const result = await this.sendCommand('seek', { timeInMilliseconds });
-      if (result && socket && socket.connected) {
-        socket.emit('seek-time', { currentTime: timeInMilliseconds });
-      }
-      return result;
     }
   };
   
@@ -145,12 +90,6 @@
   const utils = {
     isNetflixPage() {
       return netflixAPI.isNetflixPage();
-    },
-    
-    formatTime(seconds) {
-      const mins = Math.floor(seconds / 60);
-      const secs = Math.floor(seconds % 60);
-      return `${mins}:${secs.toString().padStart(2, '0')}`;
     },
     
     log(message, type = 'info') {
@@ -170,21 +109,6 @@
         default:
           console.log(`${prefix} ${message}`);
       }
-    },
-    
-    // 播放影片
-    async playVideo(targetTime) {
-      return await netflixAPI.play(targetTime);
-    },
-    
-    // 暫停影片
-    async pauseVideo() {
-      return await netflixAPI.pause();
-    },
-    
-    // 跳轉到指定時間
-    seekToTime(targetTime) {
-      return netflixAPI.seek(targetTime); // targetTime 現在是毫秒
     }
   };
   
@@ -261,36 +185,6 @@
             socket.connected = false;
           }
         };
-        
-        socket.on('connect', () => {
-          isConnected = true;
-          utils.log('成功連接到同步伺服器', 'success');
-          
-          if (currentRoom) {
-            this.joinRoom(currentRoom);
-          }
-        });
-        
-        socket.on('disconnect', () => {
-          isConnected = false;
-          utils.log('與伺服器斷線', 'warn');
-          
-          // 自動重連
-          setTimeout(() => {
-            if (!isConnected) {
-              utils.log('嘗試重新連接...');
-              this.connect();
-            }
-          }, CONFIG.RECONNECT_INTERVAL);
-        });
-        
-        socket.on('connect_error', (error) => {
-          utils.log(`連接錯誤：${error.message}`, 'error');
-        });
-        
-        // 監聽同步事件
-        this.setupEventListeners();
-        
       } catch (error) {
         utils.log(`連接失敗：${error.message}`, 'error');
       }
@@ -301,7 +195,7 @@
         socket.disconnect();
         socket = null;
       }
-      isConnected = false;
+      isJoinedRoom = false;
       currentRoom = null;
       utils.log('已斷開連接');
     },
@@ -326,6 +220,9 @@
       });
       
       utils.log(`正在建立房間：${roomName} (${roomId})`);
+      isJoinedRoom = true;
+      currentRoom = roomId;
+      
       return true;
     },
     
@@ -335,6 +232,7 @@
         return false;
       }
       
+      isJoinedRoom = true;
       currentRoom = roomId;
       socket.emit('join-room', roomId);
       utils.log(`加入房間：${roomId}`, 'success');
@@ -344,6 +242,7 @@
     leaveRoom() {
       if (socket && currentRoom) {
         socket.emit('leave-room');
+        isJoinedRoom = false;
         currentRoom = null;
         utils.log('離開房間');
       }
@@ -388,10 +287,8 @@
     // 獲取狀態
     getStatus() {
       return {
-        isConnected,
+        isJoinedRoom,
         currentRoom,
-        netflixPlayer: !!netflixPlayer,
-        netflixVideoPlayer: !!netflixVideoPlayer
       };
     },
     
@@ -483,26 +380,11 @@
       } catch (error) {
         return { success: false, error: error.message };
       }
-    },
-    
-    // 手動控制
-    async play(time) {
-      return await utils.playVideo(time);
-    },
-    
-    async pause() {
-      return await utils.pauseVideo();
-    },
-    
-    seek(time) {
-      return utils.seekToTime(time); // time 參數是毫秒
     }
   };
   
   // 監聽來自 popup 的消息
   chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-    console.log('收到消息:', request);
-    
     switch (request.action) {
       case 'getStatus':
         sendResponse({ success: true, data: messageHandler.getStatus() });
@@ -536,27 +418,6 @@
         });
         return true; // 保持消息通道開啟
         
-      case 'play':
-        messageHandler.play(request.time).then(result => {
-          sendResponse({ success: result });
-        });
-        return true;
-        
-      case 'pause':
-        messageHandler.pause().then(result => {
-          sendResponse({ success: result });
-        });
-        return true;
-        
-      case 'seek':
-        const seekResult = messageHandler.seek(request.time);
-        sendResponse({ success: seekResult });
-        break;
-        
-      case 'getNetflixAPI':
-        sendResponse({ success: true, data: messageHandler.getNetflixAPI() });
-        break;
-        
       default:
         sendResponse({ success: false, error: '未知操作' });
     }
@@ -570,9 +431,6 @@
       try {
         // 注入必要的腳本
         await injectScripts();
-        
-        // 初始化訊息監聽
-        initMessageListener();
         
         // 初始化 Netflix 控制器
         netflixController.init();

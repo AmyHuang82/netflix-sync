@@ -42,6 +42,31 @@
       }
     },
 
+    // 獲取房間狀態
+    async getRoomStatus() {
+      return new Promise((resolve) => {
+        const messageId = Date.now().toString();
+        
+        // 設置一次性監聽器等待回應
+        const listener = (event) => {
+          if (event.source !== window) return;
+          if (!event.data || event.data.type !== 'NETFLIX_SYNC_RESPONSE' || event.data.messageId !== messageId) return;
+          
+          window.removeEventListener('message', listener);
+          resolve(event.data.result);
+        };
+        
+        window.addEventListener('message', listener);
+        
+        // 發送獲取房間狀態的請求
+        window.postMessage({
+          type: 'NETFLIX_SYNC_EVENT',
+          action: 'GET_ROOM_STATUS',
+          messageId: messageId
+        }, '*');
+      });
+    },
+
     // 與 content script 通訊
     sendToContentScript(type, data) {
       window.postMessage({
@@ -125,28 +150,40 @@
       const videoElement = document.querySelector('video');
       if (!videoElement) return;
 
-      videoElement.addEventListener('play', () => {
-        const currentTime = this.getCurrentTime();
-        socket.emit('play-state', {
-          currentTime: currentTime,
-        });
-        console.log('發送播放同步事件');
+      videoElement.addEventListener('play', async () => {
+        await this.getRoomStatus().then((status) => {
+          if (!status?.isJoinedRoom) return;
+
+          const currentTime = this.getCurrentTime();
+          socket.emit('play-state', {
+            currentTime: currentTime,
+          });
+          console.log('發送播放同步事件');
+        }); 
       });
 
-      videoElement.addEventListener('pause', () => {
-        const currentTime = this.getCurrentTime();
-        socket.emit('pause-state', {
-          currentTime: currentTime,
+      videoElement.addEventListener('pause', async () => {
+        await this.getRoomStatus().then((status) => {
+          if (!status?.isJoinedRoom) return;
+
+          const currentTime = this.getCurrentTime();
+          socket.emit('pause-state', {
+            currentTime: currentTime,
+          });
+          console.log('發送暫停同步事件');
         });
-        console.log('發送暫停同步事件');
       });
 
-      videoElement.addEventListener('seeked', () => {
-        const currentTime = videoElement.currentTime * 1000;
-        socket.emit('seek-time', {
-          currentTime: currentTime,
+      videoElement.addEventListener('seeked', async () => {
+        await this.getRoomStatus().then((status) => {
+          if (!status?.isJoinedRoom) return;
+
+          const currentTime = videoElement.currentTime * 1000;
+          socket.emit('seek-time', {
+            currentTime: currentTime,
+          });
+          console.log('發送跳轉同步事件');
         });
-        console.log('發送跳轉同步事件');
       });
     }
   };
