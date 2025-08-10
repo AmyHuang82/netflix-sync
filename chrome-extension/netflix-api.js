@@ -4,6 +4,8 @@
 
   // Socket.IO 實例
   let socket = null;
+  let isConnected = false;
+  let isProcessingRemoteAction = false;
 
   const utils = {
     formatTime(seconds) {
@@ -158,7 +160,7 @@
 
       videoElement.addEventListener('play', async () => {
         await this.getRoomStatus().then((status) => {
-          if (!status?.isJoinedRoom) return;
+          if (!status?.isJoinedRoom || isProcessingRemoteAction) return;
 
           const currentTime = this.getCurrentTime();
           socket.emit('play-state', {
@@ -170,7 +172,7 @@
 
       videoElement.addEventListener('pause', async () => {
         await this.getRoomStatus().then((status) => {
-          if (!status?.isJoinedRoom) return;
+          if (!status?.isJoinedRoom || isProcessingRemoteAction) return;
 
           const currentTime = this.getCurrentTime();
           socket.emit('pause-state', {
@@ -182,7 +184,7 @@
 
       videoElement.addEventListener('seeked', async () => {
         await this.getRoomStatus().then((status) => {
-          if (!status?.isJoinedRoom) return;
+          if (!status?.isJoinedRoom || isProcessingRemoteAction) return;
 
           const currentTime = videoElement.currentTime * 1000;
           socket.emit('seek-time', {
@@ -261,9 +263,6 @@
       case 'SOCKET_IO_CONNECT':
         if (!socket) {
           socket = io(serverUrl, options);
-
-          let isConnected = false;
-          let isProcessingRemoteAction = false;
           
           // 基本事件監聽
           socket.on('connect', () => {
