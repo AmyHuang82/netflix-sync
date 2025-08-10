@@ -148,7 +148,13 @@
     // 設置事件監聽器
     setupEventListeners() {
       const videoElement = document.querySelector('video');
-      if (!videoElement) return;
+      
+      if (!videoElement) {
+        setTimeout(() => {
+          this.setupEventListeners();
+        }, 1000);
+        return;
+      }
 
       videoElement.addEventListener('play', async () => {
         await this.getRoomStatus().then((status) => {
@@ -185,6 +191,8 @@
           console.log('發送跳轉同步事件');
         });
       });
+
+      console.log('開始監聽播放事件');
     }
   };
 
@@ -234,6 +242,17 @@
     }
   });
 
+  const replaceState = history.replaceState;
+  history.replaceState = function(...args) {
+    replaceState.apply(history, args);
+    window.dispatchEvent(new Event('urlchange'));
+  };
+
+  window.addEventListener('urlchange', () => {
+    console.log('網址變了：', location.href);
+    netflixAPI.setupEventListeners();
+  });
+
   // Socket.IO 事件處理
   function handleSocketIOOperation(event) {
     const { type, messageId, serverUrl, options, event: socketEvent, data } = event.data;
@@ -251,7 +270,6 @@
             isConnected = true;
 
             netflixAPI.setupEventListeners();
-            console.log('開始監聽播放事件');
 
             window.postMessage({
               type: 'SOCKET_IO_EVENT',
