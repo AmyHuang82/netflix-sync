@@ -6,6 +6,7 @@
   let socket = null;
   let isConnected = false;
   let isProcessingRemoteAction = false;
+  let isVideoListenerSetup = false;
 
   const utils = {
     formatTime(seconds) {
@@ -149,6 +150,8 @@
 
     // 設置事件監聽器
     setupEventListeners() {
+      if (isVideoListenerSetup) return;
+
       const videoElement = document.querySelector('video');
       
       if (!videoElement) {
@@ -194,6 +197,7 @@
         });
       });
 
+      isVideoListenerSetup = true;
       console.log('開始監聽播放事件');
     }
   };
@@ -252,7 +256,11 @@
 
   window.addEventListener('urlchange', () => {
     console.log('網址變了：', location.href);
-    netflixAPI.setupEventListeners();
+    isVideoListenerSetup = false;
+    
+    if (netflixAPI.isNetflixPage()) {
+      netflixAPI.setupEventListeners();
+    }
   });
 
   // Socket.IO 事件處理
