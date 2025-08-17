@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import Head from 'next/head'
 
 export default function Home() {
-  const [status, setStatus] = useState('未連接')
   const [messages, setMessages] = useState([])
   const [rooms, setRooms] = useState([])
   const [loading, setLoading] = useState(false)
@@ -121,18 +120,6 @@ export default function Home() {
         <h1 style={{ color: '#e50914', textAlign: 'center' }}>
           🎬 Netflix Sync - 房間管理
         </h1>
-        
-        <div style={{ 
-          background: '#f5f5f5', 
-          padding: '20px', 
-          borderRadius: '8px', 
-          marginBottom: '20px' 
-        }}>
-          <h2>WebSocket 狀態</h2>
-          <p><strong>狀態：</strong> {status}</p>
-          <p><strong>端點：</strong> /api/ws</p>
-          <p><strong>Socket 連接：</strong> {socket ? '已連接' : '未連接'}</p>
-        </div>
 
         {/* 房間管理區域 */}
         <div style={{ 
@@ -246,79 +233,6 @@ export default function Home() {
               ))
             )}
           </div>
-        </div>
-
-        <div style={{ 
-          background: '#fff', 
-          padding: '20px', 
-          borderRadius: '8px', 
-          border: '1px solid #ddd',
-          marginBottom: '20px'
-        }}>
-          <h2>使用說明</h2>
-          <ol>
-            <li>部署此專案到 Vercel</li>
-            <li>更新客戶端腳本中的 <code>SERVER_URL</code></li>
-            <li>在 Netflix 頁面執行客戶端腳本</li>
-            <li>使用 <code>NetflixSync.joinRoom('房間名稱')</code> 加入同步</li>
-          </ol>
-        </div>
-
-        <div style={{ 
-          background: '#fff', 
-          padding: '20px', 
-          borderRadius: '8px', 
-          border: '1px solid #ddd',
-          marginBottom: '20px'
-        }}>
-          <h2>客戶端腳本</h2>
-          <p>選擇以下其中一個腳本在 Netflix 頁面執行：</p>
-          <ul>
-            <li><strong>Socket.IO 版本</strong>: <code>netflix-sync-client.js</code></li>
-          </ul>
-        </div>
-
-        <div style={{ 
-          background: '#fff', 
-          padding: '20px', 
-          borderRadius: '8px', 
-          border: '1px solid #ddd',
-          marginBottom: '20px'
-        }}>
-          <h2>API 指令</h2>
-          <pre style={{ 
-            background: '#f8f8f8', 
-            padding: '10px', 
-            borderRadius: '4px',
-            overflow: 'auto'
-          }}>
-{`// 加入同步房間
-NetflixSync.joinRoom('my-room');
-
-// 離開房間
-NetflixSync.leaveRoom();
-
-// 斷開連接
-NetflixSync.disconnect();`}
-          </pre>
-        </div>
-
-        <div style={{ 
-          background: '#fff', 
-          padding: '20px', 
-          borderRadius: '8px', 
-          border: '1px solid #ddd',
-          marginBottom: '20px'
-        }}>
-          <h2>功能特色</h2>
-          <ul>
-            <li>🎬 播放/暫停同步</li>
-            <li>⏰ 時間跳轉同步</li>
-            <li>🔄 自動重連</li>
-            <li>🛡️ 防抖處理</li>
-            <li>👥 房間管理</li>
-            <li>🗑️ 房間刪除</li>
-          </ul>
         </div>
 
         <footer style={{ 

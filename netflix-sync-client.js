@@ -525,14 +525,9 @@
       if (netflixController.init()) {
         await connectionManager.connect();
         utils.log('NetflixSync 初始化完成！', 'success');
-        utils.log('使用 NetflixSync.createRoom({roomId: "房間 ID", roomName: "房間名稱"}) 建立房間');
-        utils.log('使用 NetflixSync.joinRoom("房間 ID") 加入同步房間');
-        utils.log('使用 NetflixSync.getRooms() 查看所有房間');
-        utils.log('使用 NetflixSync.getRoomInfo("房間 ID") 查看房間詳細資訊');
-        utils.log('使用 NetflixSync.getStatus() 查看當前狀態');
-        utils.log('使用 NetflixSync.sync() 手動同步當前狀態');
-        utils.log('使用 NetflixSync.play() / NetflixSync.pause() 手動控制播放');
-        utils.log('使用 NetflixSync.getNetflixAPI() 獲取 Netflix API 實例');
+        utils.log('使用 netflixSyncAPI.createRoom({roomId: "房間 ID", roomName: "房間名稱"}) 建立房間');
+        utils.log('使用 netflixSyncAPI.joinRoom("房間 ID") 加入同步房間');
+        utils.log('使用 netflixSyncAPI.play() / netflixSyncAPI.pause() 手動控制播放');
       }
     }
   };
