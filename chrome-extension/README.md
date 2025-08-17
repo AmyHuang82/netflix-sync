@@ -1,151 +1,24 @@
-# Netflix Sync Chrome 擴展
+# Netflix Sync Chrome Extension
 
-基於 `netflix-sync-client.js` 邏輯改寫的 Chrome 擴展版本，提供與原始腳本相同的同步功能。
+Synchronizing Netflix playback status across multiple users.
 
-## 功能特色
+## Features
 
-### 🎬 同步播放控制
-- **播放同步**：當房間內任何成員播放影片時，其他成員的影片也會同步播放
-- **暫停同步**：當房間內任何成員暫停影片時，其他成員的影片也會同步暫停
-- **時間跳轉同步**：當房間內任何成員跳轉到特定時間點時，其他成員也會同步跳轉
+### 🎬 Synchronized Playback Control
+- **Play Sync**: When any member in the room plays the video, it synchronously plays for all other members
+- **Pause Sync**: When any member in the room pauses the video, it synchronously pauses for all other members
+- **Time Jump Sync**: When any member in the room jumps to a specific timestamp, all other members will synchronously jump to the same point
 
-### 🏠 房間管理
-- **建立房間**：創建新的同步房間，設置房間 ID 和名稱
-- **加入房間**：使用房間 ID 加入現有房間
-- **離開房間**：隨時離開當前房間
-- **房間列表**：查看所有可用的房間
-- **房間資訊**：查看房間詳細資訊
+## Installation
 
-### 🔧 技術特性
-- **即時同步**：使用 Socket.IO 實現即時雙向通信
-- **自動重連**：網絡斷線時自動重新連接
-- **錯誤處理**：完善的錯誤處理和用戶提示
-- **狀態管理**：實時顯示連接狀態和房間資訊
-
-## 安裝方法
-
-### 方法一：開發者模式安裝
-1. 下載或克隆此專案
-2. 打開 Chrome 瀏覽器，進入 `chrome://extensions/`
-3. 開啟右上角的「開發人員模式」
-4. 點擊「載入未封裝項目」
-5. 選擇 `chrome-extension` 資料夾
-6. 擴展安裝完成
-
-### 方法二：打包安裝
-1. 在 `chrome://extensions/` 頁面點擊「封裝擴展功能」
-2. 選擇 `chrome-extension` 資料夾
-3. 下載生成的 `.crx` 檔案
-4. 將 `.crx` 檔案拖拽到 Chrome 擴展頁面進行安裝
-
-## 使用說明
-
-### 基本使用流程
-1. **打開 Netflix**：在 Chrome 中打開 Netflix 並開始播放影片
-2. **安裝擴展**：按照上述方法安裝 Chrome 擴展
-3. **建立房間**：
-   - 點擊擴展圖標打開彈出視窗
-   - 輸入房間 ID 和房間名稱
-   - 點擊「建立房間」
-4. **分享房間**：將房間 ID 分享給朋友
-5. **加入房間**：
-   - 朋友在 Netflix 頁面點擊擴展圖標
-   - 輸入房間 ID
-   - 點擊「加入房間」
-6. **開始同步**：房間內所有成員的播放狀態將自動同步
-
-### 進階功能
-- **查看房間列表**：點擊「查看房間列表」按鈕，在瀏覽器控制台查看所有可用房間
-- **手動控制**：可以在瀏覽器控制台使用以下命令：
-  ```javascript
-  // 手動播放
-  NetflixSync.play(timeInMilliseconds);
-  
-  // 手動暫停
-  NetflixSync.pause();
-  
-  // 手動跳轉
-  NetflixSync.seek(timeInMilliseconds);
-  
-  // 獲取狀態
-  NetflixSync.getStatus();
-  
-  // 獲取 Netflix API
-  NetflixSync.getNetflixAPI();
-  ```
-
-## 技術架構
-
-### 核心組件
-- **content.js**：內容腳本，負責與 Netflix 頁面交互
-- **popup.js**：彈出視窗腳本，提供用戶界面
-- **background.js**：背景腳本，處理擴展生命週期
-- **manifest.json**：擴展配置文件
-
-### 同步機制
-1. **事件監聽**：監聽 Netflix 播放器的播放、暫停、跳轉事件
-2. **Socket.IO 通信**：使用 WebSocket 與同步伺服器實時通信
-3. **狀態同步**：將本地播放狀態廣播給房間內其他成員
-4. **遠程控制**：接收其他成員的播放指令並執行
-
-### 伺服器配置
-- **伺服器地址**：`https://web-production-14c5.up.railway.app`
-- **通信協議**：Socket.IO over WebSocket
-- **房間管理**：支援房間創建、加入、離開、列表查詢
-
-## 故障排除
-
-### 常見問題
-1. **無法連接伺服器**
-   - 檢查網絡連接
-   - 確認伺服器地址是否正確
-   - 查看瀏覽器控制台錯誤信息
-
-2. **同步不工作**
-   - 確保在 Netflix 頁面並正在播放影片
-   - 檢查是否成功加入房間
-   - 查看瀏覽器控制台日誌
-
-3. **擴展無法載入**
-   - 確認 Chrome 版本支援
-   - 檢查 manifest.json 配置
-   - 重新載入擴展
-
-### 調試方法
-1. 打開瀏覽器開發者工具
-2. 查看 Console 標籤頁的日誌輸出
-3. 檢查 Network 標籤頁的 WebSocket 連接
-4. 使用擴展的調試功能
-
-## 開發說明
-
-### 本地開發
-1. 修改 `content.js` 中的 `CONFIG.SERVER_URL` 為本地伺服器地址
-2. 在 Chrome 擴展頁面點擊「重新載入」
-3. 測試功能並查看控制台輸出
-
-### 自定義功能
-- 修改 `content.js` 添加新的同步功能
-- 更新 `popup.html` 和 `popup.js` 添加用戶界面
-- 調整 `manifest.json` 配置權限和匹配規則
-
-## 版本歷史
-
-### v1.0.0
-- 基於 `netflix-sync-client.js` 邏輯重寫
-- 支援房間建立、加入、離開
-- 實現播放、暫停、跳轉同步
-- 添加自動重連和錯誤處理
-- 提供完整的用戶界面
-
-## 授權
-
-本專案基於原始 `netflix-sync-client.js` 腳本開發，遵循相同的授權條款。
-
-## 貢獻
-
-歡迎提交 Issue 和 Pull Request 來改進此擴展。
+### Developer Mode Installation
+1. Download or clone this project
+2. Open Chrome browser and navigate to `chrome://extensions/`
+3. Enable "Developer mode" in the top right corner
+4. Click "Load unpacked"
+5. Select the `chrome-extension` folder
+6. Extension installation complete
 
 ---
 
-**注意**：此擴展僅供學習和研究使用，請遵守 Netflix 的使用條款。 
+**Note**: This extension is for learning and research purposes only. Please comply with Netflix's terms of service.
