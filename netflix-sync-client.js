@@ -3,7 +3,7 @@
 // 1. 打開 Netflix 並開始播放影片
 // 2. 按 F12 打開開發者工具
 // 3. 貼上此腳本到 Console 並執行
-// 4. 使用 NetflixSync.joinRoom('房間名稱') 加入同步房間
+// 4. 使用 netflixSyncAPI.joinRoom('房間 ID') 加入同步房間
 
 (function() {
   'use strict';
@@ -92,10 +92,6 @@
       try {
         if (timeInMilliseconds) videoPlayer.seek(timeInMilliseconds);
         videoPlayer.play();
-        this._lastTime = this.getCurrentTime();
-        socket.emit('play-state', {
-          currentTime: this._lastTime,
-        });
         return true;
       } catch (error) {
         utils.log(`播放失敗：${error.message}`, 'error');
@@ -110,10 +106,6 @@
       
       try {
         videoPlayer.pause();
-        this._lastTime = this.getCurrentTime();
-        socket.emit('pause-state', {
-          currentTime: this._lastTime,
-        });
         return true;
       } catch (error) {
         utils.log(`暫停失敗：${error.message}`, 'error');
@@ -128,11 +120,6 @@
       
       try {
         videoPlayer.seek(timeInMilliseconds);
-        this._lastTime = timeInMilliseconds;
-        utils.log(`跳轉到時間：${utils.formatTime(timeInMilliseconds / 1000)}`);
-        socket.emit('seek-time', {
-          currentTime: timeInMilliseconds,
-        });
         return true;
       } catch (error) {
         utils.log(`跳轉失敗：${error.message}`, 'error');
@@ -471,7 +458,7 @@
   };
   
   // 全域 API
-  window.NetflixSync = {
+  window.netflixSyncAPI = {
     // 連接管理
     connect() {
       connectionManager.connect();
@@ -553,7 +540,7 @@
   // 自動初始化
   if (utils.isNetflixPage()) {
     utils.log('正在初始化 NetflixSync...');
-    window.NetflixSync.init();
+    window.netflixSyncAPI.init();
   } else {
     utils.log('請在 Netflix 頁面執行此腳本', 'error');
   }
